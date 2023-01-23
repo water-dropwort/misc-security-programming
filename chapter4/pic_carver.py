@@ -14,8 +14,7 @@ def get_http_headers(http_payload):
         headers_raw = http_payload[:http_payload.index(b"\r\n\r\n")+2]
         # ヘッダーの各要素を辞書化
         headers = dict(re.findall(r"(?P<name>.*?): (?P<value>.*?)\r\n", headers_raw.decode()))
-    except Exception as e:
-        print("[ERR] get_http_headers:",e)
+    except ValueError:
         return None
 
     if "Content-Type" not in headers:
@@ -50,8 +49,8 @@ def extract_image(headers, http_payload):
 
 def face_detect(path, file_name):
     img     = cv2.imread(path)
-    cascade = cv2.CascadeCassifier("haarcascade_frontalface_alt.xml")
-    rects   = cascade.detectMultiScale(img, 1.3, 4, cv2.cv.CV_HAAR_SCALE_IMAGE, (20,20))
+    cascade = cv2.CascadeClassifier("haarcascade_frontalface_alt.xml")
+    rects   = cascade.detectMultiScale(img, 1.3, 4, cv2.CASCADE_SCALE_IMAGE, (20,20))
 
     if len(rects) == 0:
         return False
@@ -60,7 +59,7 @@ def face_detect(path, file_name):
 
     # 画像中のすべての顔をハイライト
     for x1,y1,x2,y2 in rects:
-        cv2.rectangle(img, (x1,y1), (x,y2), (127,255,0), 2)
+        cv2.rectangle(img, (x1,y1), (x2,y2), (127,255,0), 2)
 
     cv2.imwrite("%s/%s-%s" % (faces_directory, pcap_file, file_name), img)
 
@@ -71,9 +70,9 @@ def http_assembler(pictures_directory, faces_directory, pcap_file):
     faces_detected = 0
 
     # pcapファイルを開く
-    a = rdpcap(pcap_file)
+    pcap = rdpcap(pcap_file)
     # 各TCPセッションを辞書型データに格納
-    sessions = a.sessions()
+    sessions = pcap.sessions()
     
     for session in sessions:
         http_payload = b""
@@ -85,8 +84,9 @@ def http_assembler(pictures_directory, faces_directory, pcap_file):
             except:
                 pass
         # HTTPヘッダーのパース
+        #print(http_payload)
+        
         headers = get_http_headers(http_payload)
-
         if headers is None:
             continue
 
