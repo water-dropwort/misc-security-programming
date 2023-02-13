@@ -1,0 +1,1 @@
+gcc crypt.c -lcrypt
